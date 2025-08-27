@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<!-- saved from url=(0044)https://www.cnblogs.com/ylty/p/17108963.html -->
+<html lang="zh-cn" style="--olcb-folder-code-block-max-height: 80vh; --cnb-code-bg: rgb(245, 245, 245); --cnb-code-font-size: 12px; --cnb-code-color: rgb(68, 68, 68);"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="origin-when-cross-origin">
+    
+    <meta name="description" content="JVM-SANDBOX简介 JVM-SANDBOX（沙箱）实现了一种在不重启、不侵入目标JVM应用的AOP解决方案。 GIT 地址 https://github.com/alibaba/jvm-sandbox 具有以下特性： 1）无侵入：目标应用无需重启也无需感知沙箱的存在 2）类隔离：沙箱以及沙箱">
+    <meta property="og:description" content="JVM-SANDBOX简介 JVM-SANDBOX（沙箱）实现了一种在不重启、不侵入目标JVM应用的AOP解决方案。 GIT 地址 https://github.com/alibaba/jvm-sandbox 具有以下特性： 1）无侵入：目标应用无需重启也无需感知沙箱的存在 2）类隔离：沙箱以及沙箱">
+    <meta http-equiv="Cache-Control" content="no-transform">
+    <meta http-equiv="Cache-Control" content="no-siteapp">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>JVM sandbox 实现热修复示例 - 风小雅 - 博客园</title>
+    <link rel="icon" id="favicon" href="https://assets.cnblogs.com/favicon_v3_2.ico" type="image/x-icon">
+    <link rel="canonical" href="https://www.cnblogs.com/ylty/p/17108963.html">
+    
+    <style>#home :not(.cnblogs_code):not(.cnblogs_Highlighter)>pre:not([highlighted]):not([class*="brush:"]) code:not(.hljs), :not(.cnblogs_code):not(.cnblogs_Highlighter)>pre:not([highlighted]):not([class*="brush:"]) code:not(.hljs) {background: rgb(245, 245, 245);
+        padding: 12px;
+        border: 1px solid rgb(204, 204, 204);
+        border-radius: 3px;
+        border-color: transparent;
+        color: rgb(68, 68, 68);
+        font-family: "Courier New", sans-serif;
+        font-size: 12px</style><link rel="stylesheet" href="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/blog-common.min.css">
+    
+
+    <link id="MainCss" rel="stylesheet" href="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/bundle-thinkinside.min.css">
+        <link id="highlighter-theme-cnblogs" type="text/css" rel="stylesheet" href="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/cnblogs.css">
+    
+    
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/bundle-thinkinside-mobile.min.css">
+    
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/ylty/rss">
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/ylty/rsd.xml">
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/ylty/wlwmanifest.xml">
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "@id": "https://www.cnblogs.com/ylty/p/17108963.html",
+      "headline": "JVM sandbox 实现热修复示例",
+      "description": "JVM-SANDBOX简介 JVM-SANDBOX（沙箱）实现了一种在不重启、不侵入目标JVM应用的AOP解决方案。 GIT 地址 https://github.com/alibaba/jvm-sandbox 具有以下特性： 1）无侵入：目标应用无需重启也无需感知沙箱的存在 2）类隔离：沙箱以及沙箱",
+      "image": [
+        
+      ],
+      "author": {
+        "@type": "Person",
+        "@id": "https://www.cnblogs.com/ylty/",
+        "name": "风小雅",
+        "url": "https://www.cnblogs.com/ylty/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://www.cnblogs.com/",
+        "name": "博客园",
+        "url": "https://www.cnblogs.com/"
+      },
+      "datePublished": "2023-02-10T14:59:00.0000000&#x2B;08:00",
+      "dateModified": "2025-01-23T17:11:00.0000000&#x2B;08:00",
+      "wordCount": "12557",
+      "isPartOf": {
+        "@type": "Blog",
+        "@id": "https://www.cnblogs.com/ylty/",
+        "name": "风小雅",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://www.cnblogs.com/",
+          "name": "博客园"
+        }
+      }
+    }
+    </script>
+
+    <script>
+        var currentBlogId = 181462;
+        var currentBlogApp = 'ylty';
+        var isLogined = false;
+        var isBlogOwner = false;
+        var skinName = 'ThinkInside';
+        var visitorUserId = '';
+        var hasCustomScript = false;
+        window.cb_enable_mathjax = false;
+        window.mathEngine = 0;
+        window.codeHighlightEngine = 1;
+        window.enableCodeLineNumber = false;
+        window.codeHighlightTheme = 'cnblogs';
+        window.darkModeCodeHighlightTheme = 'vs2015';
+        window.isDarkCodeHighlightTheme = false;
+        window.isDarkModeCodeHighlightThemeDark = true;
+        window.isDisableCodeHighlighter = false;
+        window.enableCodeThemeTypeFollowSystem = false;
+        window.enableMacStyleCodeBlock = false;
+    </script>
+        <script>
+            window.currentPostId = 17108963;
+            window.currentPostDateAdded = '2023-02-10 14:59';
+        </script>
+    <script src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/jquery-3.3.1.min.js.下载"></script>
+    <script src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/blog-common.min.js.下载"></script><style>.medium-zoom-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 300ms;
+  will-change: opacity;
+}
+
+.medium-zoom--opened .medium-zoom-overlay {
+  cursor: pointer;
+  cursor: zoom-out;
+  opacity: 1;
+}
+
+.medium-zoom-image {
+  cursor: pointer;
+  cursor: zoom-in;
+  /*
+    The `transition` is marked as "!important" for the animation to happen
+    even though it's overriden by another inline `transition` style attribute.
+
+    This is problematic with frameworks that generate inline styles on their
+    images (e.g. Gatsby).
+
+    See https://github.com/francoischalifour/medium-zoom/issues/110
+   */
+  transition: transform 300ms cubic-bezier(0.2, 0, 0.2, 1) !important;
+}
+
+.medium-zoom-image--hidden {
+  visibility: hidden;
+}
+
+.medium-zoom-image--opened {
+  position: relative;
+  cursor: pointer;
+  cursor: zoom-out;
+  will-change: transform;
+}
+</style><script id="hljs-script" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/highlight.min.js.下载" type="text/javascript" async=""></script>
+    
+<meta property="og:image" content="https://assets.cnblogs.com/logo_square.png"></head>
+<body class="skin-thinkinside has-navbar hljs-engine">
+    <a name="top"></a>
+        <div id="imagebar" class="imagebar-mobile imagebar-text-mobile formobile">
+                <a href="https://www.doubao.com/?channel=cnblogs&amp;source=hw_db_cnblogs&amp;type=lunt&amp;theme=bianc" onclick="countCreativeClicks(&#39;M2-字节-豆包&#39;)" rel="nofollow">
+                    <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/35695-20250620221146444-645204917.webp" alt="" onload="countCreativeImpressionsOnMobile(&#39;M2-字节-豆包&#39;)">
+                    <span id="m2_impression" style="display:none"></span>
+                </a>
+        </div>
+    <div id="top_nav" class="navbar forpc">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding">                    
+                    <a href="https://www.cnblogs.com/" title="开发者的网上家园" role="banner">
+                        <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/logo.svg" alt="博客园logo">
+                    </a>
+                </li>               
+                <li><a href="https://cnblogs.vip/">会员</a></li>
+                <li><a href="https://www.cnblogs.com/cmt/p/18500368">众包</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="countClicks(&#39;nav&#39;, &#39;skin-navbar-news&#39;)">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="countClicks(&#39;nav&#39;, &#39;skin-navbar-q&#39;)">博问</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="countClicks(&#39;nav&#39;, &#39;skin-navbar-ing&#39;)">闪存</a></li>
+                    <li><a href="https://www.cnblogs.com/cmt/p/18341478">赞助商</a></li>
+                    <li><a href="https://trae.cnblogs.com/" target="_blank">Trae</a></li>
+                <li><a href="https://chat2db-ai.com/" target="_blank" onclick="countClicks(&#39;nav&#39;, &#39;skin-navbar-chat2db&#39;)">Chat2DB</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search dropdown" action="https://zzk.cnblogs.com/s" method="get" role="search">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="search" tabindex="3" autocomplete="off">
+                        <button id="zzk_search_button" onclick="window.navbarSearchManager.triggerActiveOption()">
+                            <img id="search_icon" class="focus-hidden" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/search.svg" alt="搜索">
+                            <img class="hidden focus-visible" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/enter.svg" alt="搜索">
+                        </button>
+                        <ul id="navbar_search_options" class="dropdown-menu quick-search-menu">
+                            <li tabindex="0" class="active" onclick="zzkSearch(event, document.getElementById(&#39;zzk_search_input&#39;).value)">
+                                <div class="keyword-wrapper">
+                                    <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/search.svg" alt="搜索">
+                                    <div class="keyword"></div>
+                                </div>
+                                <span class="search-area">所有博客</span>
+                            </li>
+                                    <li tabindex="1" onclick="zzkBlogSearch(event, &#39;ylty&#39;, document.getElementById(&#39;zzk_search_input&#39;).value)">
+                                        <div class="keyword-wrapper">
+                                            <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/search.svg" alt="搜索">
+                                            <div class="keyword"></div>
+                                        </div>
+                                        <span class="search-area">当前博客</span>
+                                    </li>
+                        </ul>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔" style="display: none;">
+                        <img id="new_post_icon" class="navbar-icon" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/newpost.svg" alt="写随笔">
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx" alt="我的博客" title="我的博客" style="display: none;">
+                        <img id="myblog_icon" class="navbar-icon" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/myblog.svg" alt="我的博客">
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息" style="display: none;">
+                        <img id="msg_icon" class="navbar-icon" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/message.svg" alt="短消息">
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <a id="navbar_lite_mode_indicator" data-current-page="blog" style="display: none" href="javascript:void(0)" alt="简洁模式" title="简洁模式启用，您在访问他人博客时会使用简洁款皮肤展示">
+                        <img class="navbar-icon" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/lite-mode-on.svg" alt="简洁模式">
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown" style="display: none;">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/avatar-default.svg" alt="用户头像">
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://passport.cnblogs.com/GetBlogApplyStatus.aspx">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="https://vip.cnblogs.com/my">会员中心</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup" style="display: inline;">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()" style="display: inline;">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <div id="page_begin_html">
+        <link href="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/cnblogBlack.css" rel="stylesheet">
+    </div>
+
+    <div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/ylty/"><img id="blogLogo" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/logo.gif" alt="返回主页"></a>		
+		
+
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/ylty">风小雅</a>
+</h1>
+<h2></h2>
+
+
+
+
+		
+	</div>
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+</li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/ylty/">
+首页</a>
+</li>
+<li>
+
+<a id="blog_nav_newpost" class="menu" href="https://i.cnblogs.com/EditPosts.aspx?opt=1">
+新随笔</a>
+</li>
+<li>
+<a id="blog_nav_contact" class="menu" href="https://msg.cnblogs.com/send/%E9%A3%8E%E5%B0%8F%E9%9B%85">
+联系</a></li>
+<li>
+<a id="blog_nav_rss" class="menu" href="javascript:void(0)" data-rss="https://www.cnblogs.com/ylty/rss/">
+订阅</a>
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+</li>
+</ul>
+
+
+		<div class="blogStats">
+			<span id="stats_post_count">随笔 - 37&nbsp; </span>
+<span id="stats_article_count">文章 - 1&nbsp; </span>
+<span id="stats-comment_count">评论 - 14&nbsp; </span>
+<span id="stats-total-view-count">阅读 - 
+<span title="总阅读数: 48145">
+48145</span></span>
+
+		</div>
+	</div>
+</div>
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    
+    <div id="topics">
+        <div class="post">
+            <h1 class="postTitle">
+                <a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/ylty/p/17108963.html" title="发布于 2023-02-10 14:59">
+    <span role="heading" aria-level="2">JVM sandbox 实现热修复示例</span>
+    
+
+</a><button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                <div id="cnblogs_post_body" class="blogpost-body cnblogs-markdown">
+<h1 id="jvm-sandbox简介">JVM-SANDBOX简介<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h1>
+<p>JVM-SANDBOX（沙箱）实现了一种在不重启、不侵入目标JVM应用的AOP解决方案。<br>
+GIT 地址 <a href="https://github.com/alibaba/jvm-sandbox" target="_blank" rel="noopener nofollow">https://github.com/alibaba/jvm-sandbox</a></p>
+<p>具有以下特性：<br>
+1）无侵入：目标应用无需重启也无需感知沙箱的存在<br>
+2）类隔离：沙箱以及沙箱的模块不会和目标应用的类相互干扰<br>
+3）可插拔：沙箱以及沙箱的模块可以随时加载和卸载，不会在目标应用留下痕迹<br>
+4）多租户：目标应用可以同时挂载不同租户下的沙箱并独立控制<br>
+5）高兼容：支持JDK[6,11]</p>
+<p>本文将介绍利用 JVM-SANDBOX 自定义修复 exception 的方法。</p>
+<h1 id="故障模拟">故障模拟<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h1>
+<p>原服务模拟抛出异常的代码如下：</p>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-typescript"><span class="hljs-keyword">import</span> lombok.<span class="hljs-property">extern</span>.<span class="hljs-property">slf4j</span>.<span class="hljs-property">Slf4j</span>;
+<span class="hljs-keyword">import</span> org.<span class="hljs-property">springframework</span>.<span class="hljs-property">web</span>.<span class="hljs-property">bind</span>.<span class="hljs-property">annotation</span>.<span class="hljs-property">GetMapping</span>;
+<span class="hljs-keyword">import</span> org.<span class="hljs-property">springframework</span>.<span class="hljs-property">web</span>.<span class="hljs-property">bind</span>.<span class="hljs-property">annotation</span>.<span class="hljs-property">RestController</span>;
+
+<span class="hljs-meta">@Slf4j</span>
+<span class="hljs-meta">@RestController</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SandboxController</span> {
+
+    <span class="hljs-meta">@GetMapping</span>(<span class="hljs-string">"/test/void"</span>)
+    <span class="hljs-keyword">public</span> <span class="hljs-title class_">String</span> <span class="hljs-title function_">testVoid</span>(<span class="hljs-params"></span>) {
+        <span class="hljs-title function_">error</span>();
+        <span class="hljs-keyword">return</span> <span class="hljs-string">"success"</span>;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-built_in">void</span> <span class="hljs-title function_">error</span>(<span class="hljs-params"></span>) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(<span class="hljs-string">"Illegal state!"</span>);
+    }
+
+}
+</code></pre>
+<p>此时，只要请求 /test/void 都会抛出异常。</p>
+<h1 id="修复示例">修复示例<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h1>
+<p>现在，我们提供一个热修复方案：</p>
+<h3 id="1-安装jvm-sandbox">1. 安装jvm-sandbox。<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h3>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-python"><span class="hljs-comment"># 下载</span>
+wget https://ompc.oss.aliyuncs.com/jvm-sandbox/release/sandbox-stable-<span class="hljs-built_in">bin</span>.<span class="hljs-built_in">zip</span>
+<span class="hljs-comment"># 解压</span>
+unzip sandbox-stable-<span class="hljs-built_in">bin</span>.<span class="hljs-built_in">zip</span>
+</code></pre>
+<h3 id="2-新建工程编写修复代码">2. 新建工程，编写修复代码<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h3>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-java"><span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.Information;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.Module;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.ProcessController;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.annotation.Command;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.Advice;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.AdviceListener;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.EventWatchBuilder;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.resource.ModuleEventWatcher;
+<span class="hljs-keyword">import</span> org.kohsuke.MetaInfServices;
+
+<span class="hljs-keyword">import</span> javax.annotation.Resource;
+
+<span class="hljs-comment">/**
+ * <span class="hljs-doctag">@author</span> zhengqian
+ * <span class="hljs-doctag">@date</span> 2023.02.06
+ */</span>
+<span class="hljs-meta">@MetaInfServices(Module.class)</span>
+<span class="hljs-meta">@Information(id = "exception-handler")</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ExceptionHandlerModule</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Module</span> {
+
+    <span class="hljs-meta">@Resource</span>
+    <span class="hljs-keyword">private</span> ModuleEventWatcher moduleEventWatcher;
+
+    <span class="hljs-meta">@Command("repairExceptionVoid")</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">repairExceptionVoid</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventWatchBuilder</span>(moduleEventWatcher)
+                .onClass(<span class="hljs-string">"xxx.xxx.controller.SandboxController"</span>) <span class="hljs-comment">//对应类名</span>
+                .onBehavior(<span class="hljs-string">"error"</span>)  <span class="hljs-comment">// 对应方法名</span>
+                .onWatch(<span class="hljs-keyword">new</span> <span class="hljs-title class_">AdviceListener</span>() {
+                    <span class="hljs-comment">/**
+                     * 拦截指定方法，当这个方法抛出异常时将会被
+                     * AdviceListener#afterThrowing()所拦截
+                     */</span>
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterThrowing</span><span class="hljs-params">(Advice advice)</span> <span class="hljs-keyword">throws</span> Throwable {
+
+                        <span class="hljs-comment">// 在此，你可以通过ProcessController来改变原有方法的执行流程</span>
+                        <span class="hljs-comment">// 这里的代码意义是：改变原方法抛出异常的行为，变更为立即返回；void返回值用null表示</span>
+                        ProcessController.returnImmediately(<span class="hljs-literal">null</span>);
+                    }
+                });
+    }
+}
+</code></pre>
+<p>工程依赖参考</p>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-xml"><span class="hljs-meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">project</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0"</span>
+         <span class="hljs-attr">xmlns:xsi</span>=<span class="hljs-string">"http://www.w3.org/2001/XMLSchema-instance"</span>
+         <span class="hljs-attr">xsi:schemaLocation</span>=<span class="hljs-string">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">modelVersion</span>&gt;</span>4.0.0<span class="hljs-tag">&lt;/<span class="hljs-name">modelVersion</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.example<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>jvm-sandbox-tool<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.0-SNAPSHOT<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">properties</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">maven.deploy.skip</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">maven.deploy.skip</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">maven.install.skip</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">maven.install.skip</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">properties</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">build</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">finalName</span>&gt;</span>${project.name}-${project.version}<span class="hljs-tag">&lt;/<span class="hljs-name">finalName</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">plugins</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-compiler-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.8.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">source</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">source</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">target</span>&gt;</span>1.8<span class="hljs-tag">&lt;/<span class="hljs-name">target</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">encoding</span>&gt;</span>UTF-8<span class="hljs-tag">&lt;/<span class="hljs-name">encoding</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">showDeprecation</span>&gt;</span>true<span class="hljs-tag">&lt;/<span class="hljs-name">showDeprecation</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">plugin</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.maven.plugins<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>maven-assembly-plugin<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">executions</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">execution</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">goals</span>&gt;</span>
+                            <span class="hljs-tag">&lt;<span class="hljs-name">goal</span>&gt;</span>attached<span class="hljs-tag">&lt;/<span class="hljs-name">goal</span>&gt;</span>
+                        <span class="hljs-tag">&lt;/<span class="hljs-name">goals</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">phase</span>&gt;</span>package<span class="hljs-tag">&lt;/<span class="hljs-name">phase</span>&gt;</span>
+                        <span class="hljs-tag">&lt;<span class="hljs-name">configuration</span>&gt;</span>
+                            <span class="hljs-tag">&lt;<span class="hljs-name">descriptorRefs</span>&gt;</span>
+                                <span class="hljs-tag">&lt;<span class="hljs-name">descriptorRef</span>&gt;</span>jar-with-dependencies<span class="hljs-tag">&lt;/<span class="hljs-name">descriptorRef</span>&gt;</span>
+                            <span class="hljs-tag">&lt;/<span class="hljs-name">descriptorRefs</span>&gt;</span>
+                        <span class="hljs-tag">&lt;/<span class="hljs-name">configuration</span>&gt;</span>
+                    <span class="hljs-tag">&lt;/<span class="hljs-name">execution</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">executions</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">plugin</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">plugins</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">build</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span>
+
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.alibaba.jvm.sandbox<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>sandbox-module-starter<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">type</span>&gt;</span>pom<span class="hljs-tag">&lt;/<span class="hljs-name">type</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.alibaba.jvm.sandbox<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>sandbox-api<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>provided<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.alibaba.jvm.sandbox<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>sandbox-common-api<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.kohsuke.metainf-services<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>metainf-services<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.9<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>provided<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+
+
+        <span class="hljs-comment">&lt;!-- DEBUG工程公共依赖模块，SANDBOX父工程托管 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.apache.commons<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>commons-lang3<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.4<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>commons-collections<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>commons-collections<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.2.2<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+
+        <span class="hljs-comment">&lt;!-- DEBUG工程独有依赖模块，所以单独配置并指定了版本 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>ognl<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>ognl<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>3.0.8<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.google.guava<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>guava<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>18.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+
+        <span class="hljs-comment">&lt;!-- 给DEBUG模块单独配置一个日志 --&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>org.slf4j<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>slf4j-api<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.7.24<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>ch.qos.logback<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>logback-classic<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>1.2.1<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>javax.servlet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>javax.servlet-api<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.0.1<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">scope</span>&gt;</span>provided<span class="hljs-tag">&lt;/<span class="hljs-name">scope</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+
+        <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.alibaba.fastjson2<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>fastjson2<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>2.0.23<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span>
+
+<span class="hljs-tag">&lt;/<span class="hljs-name">project</span>&gt;</span>
+</code></pre>
+<h3 id="3-打包启动">3. 打包，启动<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h3>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-bash"><span class="hljs-comment"># 打包</span>
+mvn clean package
+<span class="hljs-comment"># 将打包好的内容复制到第一步sandbox-module的目录位置，注意改成你自己的目录</span>
+<span class="hljs-built_in">cp</span> target/jvm-sandbox-tool-1.0-SNAPSHOT-jar-with-dependencies.jar ~/install/jvm-sandbox/sandbox/sandbox-module/.
+
+</code></pre>
+<h3 id="4-启动">4. 启动<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h3>
+<pre class="highlighter-hljs" highlighted="true" has-selection="true"><code class="highlighter-hljs hljs language-bash"><span class="hljs-comment"># 这里假设 27377 是目标进程号（也就是报异常的原服务）</span>
+./sandbox.sh -p 27377
+</code></pre>
+<h3 id="5-执行修复指令">5. 执行修复指令<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h3>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-bash">./sandbox.sh -p 27377 -d <span class="hljs-string">'exception-handler/repairExceptionVoid'</span>
+</code></pre>
+<p>此时再请求 /test/void 会正常返回，不会报错。使用指令<code> ./sandbox.sh -p 27377 -S</code>停用sandbox后，服务恢复异常，实现了热插拔。</p>
+<h1 id="改为可传参的通用版本">改为可传参的通用版本<button class="cnblogs-toc-button" title="显示目录导航" aria-expanded="false"></button></h1>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-java"><span class="hljs-keyword">import</span> com.alibaba.fastjson2.JSONObject;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.Information;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.Module;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.ProcessController;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.annotation.Command;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.http.printer.ConcurrentLinkedQueuePrinter;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.http.printer.Printer;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.Advice;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.AdviceListener;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.EventWatchBuilder;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.listener.ext.EventWatcher;
+<span class="hljs-keyword">import</span> com.alibaba.jvm.sandbox.api.resource.ModuleEventWatcher;
+<span class="hljs-keyword">import</span> org.apache.commons.lang3.StringUtils;
+<span class="hljs-keyword">import</span> org.kohsuke.MetaInfServices;
+
+<span class="hljs-keyword">import</span> javax.annotation.Resource;
+<span class="hljs-keyword">import</span> java.io.PrintWriter;
+<span class="hljs-keyword">import</span> java.util.ArrayList;
+<span class="hljs-keyword">import</span> java.util.Map;
+
+<span class="hljs-meta">@MetaInfServices(Module.class)</span>
+<span class="hljs-meta">@Information(id = "exception-repair", version = "0.0.1", author = "xxx@mail.com")</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">ExceptionRepairModule</span> <span class="hljs-keyword">extends</span> <span class="hljs-title class_">ParamSupported</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">Module</span> {
+
+    <span class="hljs-meta">@Resource</span>
+    <span class="hljs-keyword">private</span> ModuleEventWatcher moduleEventWatcher;
+
+    <span class="hljs-meta">@Command("returnObject")</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">returnObject</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Map&lt;String, String&gt; param, <span class="hljs-keyword">final</span> PrintWriter writer)</span> {
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">cnPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"class"</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">mnPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"method"</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">rtPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"return"</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">rtString</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"returnString"</span>);
+
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Printer</span> <span class="hljs-variable">printer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcurrentLinkedQueuePrinter</span>(writer);
+
+        <span class="hljs-keyword">final</span> <span class="hljs-type">EventWatcher</span> <span class="hljs-variable">watcher</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventWatchBuilder</span>(moduleEventWatcher)
+                .onClass(cnPattern)
+                .onBehavior(mnPattern)
+                .onWatch(<span class="hljs-keyword">new</span> <span class="hljs-title class_">AdviceListener</span>() {
+                    <span class="hljs-comment">/**
+                     * 拦截指定方法，当这个方法抛出异常时将会被
+                     * AdviceListener#afterThrowing()所拦截
+                     */</span>
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterThrowing</span><span class="hljs-params">(Advice advice)</span> <span class="hljs-keyword">throws</span> Throwable {
+
+                        <span class="hljs-type">Class</span> <span class="hljs-variable">clazz</span> <span class="hljs-operator">=</span> Class.forName(rtPattern);
+                        Object object;
+                        <span class="hljs-keyword">if</span> (StringUtils.isEmpty(rtString)) {
+                            object = clazz.newInstance();
+                            printer.print(<span class="hljs-string">"repair exception, return empty object"</span>);
+                        } <span class="hljs-keyword">else</span> {
+                            object = JSONObject.parseObject(rtString, clazz);
+                            printer.print(<span class="hljs-string">"repair exception, return object: "</span> + object.toString());
+                        }
+
+                        ProcessController.returnImmediately(object);
+                    }
+                });
+
+        <span class="hljs-keyword">try</span> {
+            printer.println(String.format(
+                    <span class="hljs-string">"tracing on [%s#%s].\nPress CTRL_C abort it!"</span>,
+                    cnPattern,
+                    mnPattern
+            ));
+            printer.waitingForBroken();
+        } <span class="hljs-keyword">finally</span> {
+            watcher.onUnWatched();
+        }
+    }
+
+    <span class="hljs-meta">@Command("returnEmptyList")</span>
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">returnList</span><span class="hljs-params">(<span class="hljs-keyword">final</span> Map&lt;String, String&gt; param, <span class="hljs-keyword">final</span> PrintWriter writer)</span> {
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">cnPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"class"</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">mnPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"method"</span>);
+        <span class="hljs-keyword">final</span> <span class="hljs-type">String</span> <span class="hljs-variable">rtPattern</span> <span class="hljs-operator">=</span> getParameter(param, <span class="hljs-string">"return"</span>);
+
+        <span class="hljs-keyword">final</span> <span class="hljs-type">Printer</span> <span class="hljs-variable">printer</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcurrentLinkedQueuePrinter</span>(writer);
+
+        <span class="hljs-keyword">final</span> <span class="hljs-type">EventWatcher</span> <span class="hljs-variable">watcher</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventWatchBuilder</span>(moduleEventWatcher)
+                .onClass(cnPattern)
+                .onBehavior(mnPattern)
+                .onWatch(<span class="hljs-keyword">new</span> <span class="hljs-title class_">AdviceListener</span>() {
+                    <span class="hljs-comment">/**
+                     * 拦截指定方法，当这个方法抛出异常时将会被
+                     * AdviceListener#afterThrowing()所拦截
+                     */</span>
+                    <span class="hljs-meta">@Override</span>
+                    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterThrowing</span><span class="hljs-params">(Advice advice)</span> <span class="hljs-keyword">throws</span> Throwable {
+                        ProcessController.returnImmediately(<span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;());
+                    }
+                });
+
+        <span class="hljs-keyword">try</span> {
+            printer.println(String.format(
+                    <span class="hljs-string">"tracing on [%s#%s].\nPress CTRL_C abort it!"</span>,
+                    cnPattern,
+                    mnPattern
+            ));
+            printer.waitingForBroken();
+        } <span class="hljs-keyword">finally</span> {
+            watcher.onUnWatched();
+        }
+    }
+}
+</code></pre>
+<p>故障模拟</p>
+<pre class="highlighter-hljs" highlighted="true" has-selection="true"><code class="highlighter-hljs hljs language-typescript"><span class="hljs-meta">@Slf4j</span>
+<span class="hljs-meta">@RestController</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SandboxController</span> {
+
+    <span class="hljs-meta">@GetMapping</span>(<span class="hljs-string">"/test/object"</span>)
+    <span class="hljs-keyword">public</span> <span class="hljs-title class_">SandboxReturnType</span> <span class="hljs-title function_">testObject</span>(<span class="hljs-params"></span>) {
+        <span class="hljs-title class_">SandboxReturnType</span> <span class="hljs-keyword">type</span> = <span class="hljs-title function_">errorObject</span>();
+        log.<span class="hljs-title function_">info</span>(<span class="hljs-string">"type:{}"</span>, <span class="hljs-keyword">type</span>);
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">type</span>;
+    }
+
+    <span class="hljs-keyword">private</span> <span class="hljs-title class_">SandboxReturnType</span> <span class="hljs-title function_">errorObject</span>(<span class="hljs-params"></span>) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(<span class="hljs-string">"Illegal state!"</span>);
+    }
+
+}
+</code></pre>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-typescript"><span class="hljs-meta">@Data</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">SandboxReturnType</span> {
+    <span class="hljs-keyword">private</span> <span class="hljs-title class_">String</span> name;
+}
+</code></pre>
+<p>执行指令，可以指定作用的类、方法、以及需要返回的object（传入的是json字段串，且这里的 returnString 做了urlencode）</p>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-dos">./sandbox.sh -p <span class="hljs-number">47620</span> -d 'exception-repair/returnObject?class=org.example.demo.controller.SandboxController&amp;method=errorObject&amp;return=org.example.demo.controller.SandboxReturnType&amp;returnString=<span class="hljs-variable">%7B%</span><span class="hljs-number">22</span>name<span class="hljs-variable">%22%</span><span class="hljs-number">3</span>A<span class="hljs-variable">%22111%</span><span class="hljs-number">22</span>%<span class="hljs-number">7</span>D'
+</code></pre>
+<p>此时，请求 /test/object 时可以正常返回传入的数据，实现热修复</p>
+<pre class="highlighter-hljs" highlighted="true"><code class="highlighter-hljs hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">"name"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">111</span>
+<span class="hljs-punctuation">}</span>
+</code></pre>
+<p>可传参的通用代码可以打包上传，需要时直接下载使用即可，不需要每次重复写代码、打包处理。</p>
+
+</div>
+<div class="clear"></div>
+<div id="blog_post_info_block" role="contentinfo">
+
+
+
+
+    <div id="blog_post_info">
+<div id="green_channel">
+        <a href="javascript:void(0);" id="green_channel_digg" onclick="DiggIt(17108963,cb_blogId,1);green_channel_success(this,&#39;谢谢推荐！&#39;);">好文要顶</a>
+        <a id="green_channel_follow" onclick="follow(&#39;c13cb079-7a8c-e211-90a7-f6db9189f8ef&#39;);" href="javascript:void(0);">关注我</a>
+    <a id="green_channel_favorite" onclick="AddToWz(cb_entryId);return false;" href="javascript:void(0);">收藏该文</a>
+    <a id="green_channel_wechat" href="javascript:void(0);" onclick="shareManager.wechatShare()">微信分享</a>
+</div>
+<div id="author_profile">
+    <div id="author_profile_info" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/ylty/" target="_blank"><img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/20161215191641.png" class="author_avatar" alt=""></a>
+        <div id="author_profile_detail" class="author_profile_info">
+            <a href="https://home.cnblogs.com/u/ylty/">风小雅</a>
+            <br>
+            <a href="https://home.cnblogs.com/u/ylty/followers/">粉丝 - <span class="follower-count">0</span></a>
+            <a href="https://home.cnblogs.com/u/ylty/followees/">关注 - <span class="following-count">0</span></a><br>
+        </div>
+    </div>
+    <div class="clear"></div>
+    <div id="author_profile_honor"></div>
+    <div id="author_profile_follow" class="follow-tip">
+                <a href="javascript:void(0);" onclick="follow(&#39;c13cb079-7a8c-e211-90a7-f6db9189f8ef&#39;);return false;">+加关注</a>
+    </div>
+</div>
+<div id="div_digg">
+    <div class="diggit" onclick="votePost(17108963,&#39;Digg&#39;)">
+        <span class="diggnum" id="digg_count">0</span>
+    </div>
+    <div class="buryit" onclick="votePost(17108963,&#39;Bury&#39;)">
+        <span class="burynum" id="bury_count">0</span>
+    </div>
+    <div class="clear"></div>
+    <div class="diggword" id="digg_tips">
+    </div>
+        <div id="vip_tip"><a class="tip" href="https://cnblogs.vip/" target="_blank">升级成为会员</a></div>
+</div>
+
+<script type="text/javascript">
+    currentDiggType = 0;
+</script>
+</div>
+    <div class="clear"></div>
+    <div id="post_next_prev">
+
+    <a href="https://www.cnblogs.com/ylty/p/16810301.html" class="p_n_p_prefix">« </a> 上一篇：    <a href="https://www.cnblogs.com/ylty/p/16810301.html" data-featured-image="" title="发布于 2022-10-20 16:20">SpringBoot Redis 实现分布式锁</a>
+    <br>
+    <a href="https://www.cnblogs.com/ylty/p/17108764.html" class="p_n_p_prefix">» </a> 下一篇：    <a href="https://www.cnblogs.com/ylty/p/17108764.html" data-featured-image="" title="发布于 2023-02-14 16:24">JVM sandbox 解析</a>
+
+</div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date" data-last-update-days="713.0916666666667" data-date-updated="2025-01-23 17:11" aria-expanded="false">2023-02-10 14:59</span>&nbsp;
+<a href="https://www.cnblogs.com/ylty">风小雅</a>&nbsp;
+阅读(<span id="post_view_count">393</span>)&nbsp;
+评论(<span id="post_comment_count">11</span>)&nbsp;
+&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(17108963);return false;">收藏</a>&nbsp;
+<a href="javascript:void(0)" onclick="reportManager.report({ currentUserId: &#39;&#39;, targetType: &#39;blogPost&#39;, targetId: &#39;17108963&#39;, targetLink: &#39;https://www.cnblogs.com/ylty/p/17108963.html&#39;, title: &#39;JVM sandbox 实现热修复示例&#39; })">举报</a>
+</div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script>
+    var cb_entryId = 17108963, cb_entryCreatedDate = '2023-02-10 14:59', cb_postType = 1, cb_postTitle = 'JVM sandbox 实现热修复示例';
+    var allowComments = true, cb_blogId = 181462, cb_blogApp = 'ylty', cb_blogUserGuid = 'c13cb079-7a8c-e211-90a7-f6db9189f8ef';
+    mermaidRender.render()
+    markdown_highlight()
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");    
+</script>
+<a id="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav">
+        <div class="comment-nav-right">
+            <span id="span_refresh_tips"></span><a href="https://www.cnblogs.com/ylty/p/17108963.html#" onclick="return RefreshPage();">刷新页面</a><a href="https://www.cnblogs.com/ylty/p/17108963.html#top">返回顶部</a>
+        </div>
+    </div>
+    <div id="comment_form_container"><div class="login_tips">
+    登录后才能查看或发表评论，立即 <a rel="nofollow" href="javascript:void(0);" class="underline" onclick="return account.login(&#39;!comments&#39;);">登录</a> 或者
+    <a href="https://www.cnblogs.com/">逛逛</a> 博客园首页
+</div>
+</div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+        <div id="cnblogs_ch"><a href="https://www.cnblogs.com/cmt/p/19038269" target="_blank" onclick="gtag(&#39;event&#39;, &#39;click&#39;, {&#39;event_category&#39;: &#39;ad&#39;, &#39;event_label&#39;: &#39;T2-飞算&#39;})">【推荐】注册飞算 JavaAI 开发助手，立得京东e卡！分享体验再领30元</a><br><a href="http://www.uccpsoft.com/index.htm" target="_blank" onclick="gtag(&#39;event&#39;, &#39;click&#39;, {&#39;event_category&#39;: &#39;ad&#39;, &#39;event_label&#39;: &#39;T2-UCanCode&#39;})">【推荐】100%开源！大型工业跨平台软件C++源码提供，建模，组态！</a><br><a href="https://www.cnblogs.com/cmt/p/19004092" target="_blank" onclick="gtag(&#39;event&#39;, &#39;click&#39;, {&#39;event_category&#39;: &#39;ad&#39;, &#39;event_label&#39;: &#39;T2-TRAE&#39;})">【推荐】AI 的力量，开发者的翅膀：欢迎使用 AI 原生开发工具 TRAE</a><br><a href="https://www.cnblogs.com/cmt/p/19058738" target="_blank" onclick="gtag(&#39;event&#39;, &#39;click&#39;, {&#39;event_category&#39;: &#39;ad&#39;, &#39;event_label&#39;: &#39;T2-HarmonyOS&#39;})">【推荐】2025 HarmonyOS 鸿蒙创新赛正式启动，百万大奖等你挑战</a><br></div>
+    <div id="opt_under_post"></div>
+        <div id="blog_c1" class="under-post-card">
+            <a href="https://developer.huawei.com/consumer/cn/activity/digixActivity/digixcmsdetail/101750143863263087?ha_source=BKYQ3&amp;ha_sourceId=89000408" rel="nofollow" target="_blank" onclick="countCreativeClicks(&#39;C1-HarmonyOS-创新赛&#39;)">
+                <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/35695-20250825190531076-1818435893.jpg" onload="countCreativeImpressions(&#39;C1-HarmonyOS-创新赛&#39;)" alt="" style="width:300px!important;height:250px!important;min-width:300px!important;max-width:300px!important;">
+                <span id="c1_impression" style="display:none"></span>
+            </a>
+        </div>
+    <div id="under_post_card1">
+<div class="under-post-card recomm-block">
+    <b>相关博文：</b><br>
+    <div class="recomm-list">
+            <div class="recomm-item">
+                <span>·&nbsp;</span>
+                <a href="https://www.cnblogs.com/ylty/p/17108764.html" target="_blank" title="JVM sandbox 解析" class="recomm-link">JVM sandbox 解析</a>
+            </div>
+            <div class="recomm-item">
+                <span>·&nbsp;</span>
+                <a href="https://www.cnblogs.com/ylty/p/16254701.html" target="_blank" title="PowerJob高级特性-容器部署完整教程" class="recomm-link">PowerJob高级特性-容器部署完整教程</a>
+            </div>
+            <div class="recomm-item">
+                <span>·&nbsp;</span>
+                <a href="https://www.cnblogs.com/juno3550/p/16407018.html" target="_blank" title="JVM-SandBox 实战：Bug 修复 / 代码调用链 / 故障注入" class="recomm-link">JVM-SandBox 实战：Bug 修复 / 代码调用链 / 故障注入</a>
+            </div>
+            <div class="recomm-item">
+                <span>·&nbsp;</span>
+                <a href="https://www.cnblogs.com/feiye512/p/17580373.html" target="_blank" title="jvm-sandbox使用" class="recomm-link">jvm-sandbox使用</a>
+            </div>
+            <div class="recomm-item">
+                <span>·&nbsp;</span>
+                <a href="https://www.cnblogs.com/bigcoder84/p/18147344" target="_blank" title="JVM Sandbox入门详解" class="recomm-link">JVM Sandbox入门详解</a>
+            </div>
+    </div>
+</div>
+</div>
+    <div id="under_post_card2"><div class="itnews under-post-card">
+    <b>阅读排行：</b>
+    <br>
+ ·          <a href="https://www.cnblogs.com/jvxiao/p/19059712" target="_blank">爆肝三周，我终于上线了自己的第一个小程序</a>
+        <br>
+ ·          <a href="https://www.cnblogs.com/xiangji/p/19059979" target="_blank">婶可忍叔不可忍的AutoMapper,你还用吗?</a>
+        <br>
+ ·          <a href="https://www.cnblogs.com/deali/p/19058276/cuprinter-develop-fake-device-use-csharp-simulate" target="_blank">上位机开发之假装有设备，使用 C# 模拟串口设备</a>
+        <br>
+ ·          <a href="https://www.cnblogs.com/tangshiye/p/19058296" target="_blank">DeepSeek-V3.1发布，Agent 时代彻底来了</a>
+        <br>
+ ·          <a href="https://www.cnblogs.com/xiezhr/p/19060223" target="_blank">Git提交错了，别慌！还有后悔药</a>
+        <br>
+</div></div>
+    <div id="HistoryToday" class="under-post-card"></div>
+    <script type="text/javascript">
+        var commentManager = new blogCommentManager();
+        commentManager.renderComments(0);
+        fixPostBody();
+        window.footnoteTipManager.generateFootnoteTips();
+
+                                window.tocManager.displayDisableTocTips = false;
+                                window.tocManager.generateToc();
+            
+                                    setTimeout(function() { countViews(cb_blogId, cb_entryId); }, 50);
+            
+                                deliverT2();
+                                deliverC1C2();
+                                loadNewsAndKb();
+            
+                                    LoadPostCategoriesTags(cb_blogId, cb_entryId);
+            
+                                LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+                                GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+                                loadOptUnderPost();
+                                GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+                </script>
+</div>
+
+	</div>
+	</div>
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem">
+    <h3 class="catListTitle">公告</h3>
+<div id="blog-news" class="sidebar-news">
+    <div id="sidebar_news_container"><div id="profile_block">
+    昵称：
+    <a href="https://home.cnblogs.com/u/ylty/">
+        风小雅
+    </a>
+    <br>
+    园龄：
+    <a href="https://home.cnblogs.com/u/ylty/" title="入园时间：2013-03-14">
+        12年5个月
+    </a>
+    <br>
+    粉丝：
+    <a class="follower-count" href="https://home.cnblogs.com/u/ylty/followers/">
+        0
+    </a>
+    <br>
+    关注：
+    <a class="folowing-count" href="https://home.cnblogs.com/u/ylty/followees/">
+        0
+    </a>
+    <div id="p_b_follow" class="follow-tip">
+<a href="javascript:void(0)" onclick="follow(&#39;c13cb079-7a8c-e211-90a7-f6db9189f8ef&#39;)">+加关注</a></div>
+    <script>getFollowStatus('c13cb079-7a8c-e211-90a7-f6db9189f8ef');</script>
+</div>
+</div>
+</div>
+<script>loadBlogNews();</script>
+
+ 
+</div>
+<div id="sidebar_c3"></div>
+			<div id="blog-calendar" style="">
+
+<table id="blogCalendar" class="Cal" cellspacing="0" cellpadding="0" title="Calendar" border="0">
+    <tbody>
+        <tr>
+            <td colspan="7">
+                <table class="CalTitle" cellspacing="0" border="0">
+                    <tbody>
+                        <tr>
+                            <td class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2025/07/27&#39;); return false;">&lt;</a>
+                            </td>
+                            <td align="center">2025年8月</td>
+                            <td align="right" class="CalNextPrev">
+                                <a href="javascript:void(0);" onclick="loadBlogCalendar(&#39;2025/09/27&#39;); return false;">&gt;</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    <tr>
+        <th class="CalDayHeader" align="center" abbr="日" scope="col">日</th>
+        <th class="CalDayHeader" align="center" abbr="一" scope="col">一</th>
+        <th class="CalDayHeader" align="center" abbr="二" scope="col">二</th>
+        <th class="CalDayHeader" align="center" abbr="三" scope="col">三</th>
+        <th class="CalDayHeader" align="center" abbr="四" scope="col">四</th>
+        <th class="CalDayHeader" align="center" abbr="五" scope="col">五</th>
+        <th class="CalDayHeader" align="center" abbr="六" scope="col">六</th>
+    </tr>
+            <tr>
+                            <td class="CalOtherMonthDay" align="center">27</td>
+                            <td class="CalOtherMonthDay" align="center">28</td>
+                            <td class="CalOtherMonthDay" align="center">29</td>
+                            <td class="CalOtherMonthDay" align="center">30</td>
+                            <td class="CalOtherMonthDay" align="center">31</td>
+                        <td class="" align="center">
+                            1
+                        </td>
+                    <td class="CalWeekendDay" align="center">
+                        2
+                    </td>
+            </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            3
+                        </td>
+                            <td class="" align="center">
+                                4
+                            </td>
+                            <td class="" align="center">
+                                5
+                            </td>
+                            <td class="" align="center">
+                                6
+                            </td>
+                            <td class="" align="center">
+                                7
+                            </td>
+                            <td class="" align="center">
+                                8
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            9
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            10
+                        </td>
+                            <td class="" align="center">
+                                11
+                            </td>
+                            <td class="" align="center">
+                                12
+                            </td>
+                            <td class="" align="center">
+                                13
+                            </td>
+                            <td class="" align="center">
+                                14
+                            </td>
+                            <td class="" align="center">
+                                15
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            16
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            17
+                        </td>
+                            <td class="" align="center">
+                                18
+                            </td>
+                            <td class="" align="center">
+                                19
+                            </td>
+                            <td class="" align="center">
+                                20
+                            </td>
+                            <td class="" align="center">
+                                21
+                            </td>
+                            <td class="" align="center">
+                                22
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            23
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            24
+                        </td>
+                            <td class="" align="center">
+                                25
+                            </td>
+                            <td class="" align="center">
+                                26
+                            </td>
+                            <td class="CalTodayDay cal-today" align="center">
+                                27
+                            </td>
+                            <td class="" align="center">
+                                28
+                            </td>
+                            <td class="" align="center">
+                                29
+                            </td>
+                        <td class="CalWeekendDay" align="center">
+                            30
+                        </td>
+                </tr>
+                <tr>
+                        <td class="CalWeekendDay" align="center">
+                            31
+                        </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                1
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                2
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                3
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                4
+                            </td>
+                            <td class="CalOtherMonthDay" align="center">
+                                5
+                            </td>
+                        <td class="CalOtherMonthDay" align="center">
+                            6
+                        </td>
+                </tr>
+    </tbody>
+</table></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"><div id="sidebar_search" class="sidebar-block">
+    <div class="mySearch my-search">
+        <h3 class="catListTitle">搜索</h3>
+        <div id="sidebar_search_box">
+            <div id="widget_my_zzk" class="div_my_zzk">
+                <input type="text" id="q" onkeydown="return zzk_go_enter(event);" class="input_my_zzk">&nbsp;<input onclick="zzk_go()" type="button" value="找找看" id="btnZzk" class="btn_my_zzk">
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<div id="sidebar_shortcut" class="sidebar-block">
+    <div class="catListLink">
+<h3 class="catListTitle">
+常用链接
+</h3>
+<ul>
+    <li><a href="https://www.cnblogs.com/ylty/p/" title="我的博客的随笔列表">我的随笔</a></li>
+<li><a href="https://www.cnblogs.com/ylty/MyComments.html" title="我的发表过的评论列表">我的评论</a></li>
+<li><a href="https://www.cnblogs.com/ylty/OtherPosts.html" title="我评论过的随笔列表">我的参与</a></li>
+<li><a href="https://www.cnblogs.com/ylty/comments" title="我的博客的评论列表">最新评论</a></li>
+<li><a href="https://www.cnblogs.com/ylty/tag/" title="我的博客的标签列表">我的标签</a></li>
+
+</ul>
+</div>
+
+
+</div>
+
+
+
+<div id="sidebar_toptags" class="sidebar-block">
+    
+</div>
+
+
+
+<div id="sidebar_categories">
+
+    <div id="sidebar_postcategory" class="catListPostCategory sidebar-block">
+        <h3 class="catListTitle">
+            
+    <a class="sidebar-card-title-a" href="https://www.cnblogs.com/ylty/post-categories">随笔分类</a>
+
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/category/1273407.html" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">go语言(3)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/category/1588740.html" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">Java(11)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/category/1608956.html" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">Spring Cloud(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/category/1783629.html" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">工具(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/category/1589900.html" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">中间件(4)</a>
+ 
+                </li>                
+            
+        </ul>
+
+
+    </div>    
+    <div id="sidebar_postarchive" class="catListPostArchive sidebar-block">
+        <h3 class="catListTitle">
+            
+随笔档案
+
+
+        </h3>
+
+        <ul>
+
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2024/12" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2024年12月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2024/09" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2024年9月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2024/07" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2024年7月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2023/02" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2023年2月(2)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2022/10" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2022年10月(2)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2022/07" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2022年7月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2022/05" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2022年5月(2)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2022/04" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2022年4月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2021/01" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2021年1月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2020/12" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2020年12月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2020/11" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2020年11月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2020/09" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2020年9月(4)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2020/06" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2020年6月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2019/12" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2019年12月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="true" style="display: block">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2019/11" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2019年11月(3)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="false" style="display: none">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2018/11" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2018年11月(1)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="false" style="display: none">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2018/08" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2018年8月(2)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="false" style="display: none">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2018/05" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2018年5月(5)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="false" style="display: none">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2017/10" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2017年10月(3)</a>
+ 
+                </li>                
+                <li data-category-list-item-visible="false" style="display: none">
+                    <a href="https://www.cnblogs.com/ylty/p/archive/2016/11" style="--cnb-category-item-link-indent-size: calc(0 * 1em)" class="category-item-link " rel="" target="">2016年11月(3)</a>
+ 
+                </li>                
+            <li>
+                <a href="javascript:void(0)" onclick="sideColumnManager.loadMore(this)">更多</a>
+            </li>
+        </ul>
+
+
+    </div>    
+</div>
+
+<div id="sidebar_topviewedposts" class="sidebar-block">
+    <div class="catListView">
+    <h3 class="catListTitle">
+        <a href="https://www.cnblogs.com/ylty/most-viewed" class="sidebar-card-title-a">
+    阅读排行榜
+</a>
+
+    </h3>
+    <div id="TopViewPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/11851491.html">
+                            1. RocketMq 完整部署(6503)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/12004276.html">
+                            2. Spring Cloud Feign+Hystrix自定义异常处理(4479)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/9401207.html">
+                            3. Thumbnails 图片处理(4382)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/6420738.html">
+                            4. 使用Spring MockMVC对controller做单元测试(3723)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/13673357.html">
+                            5. SpringBoot接入两套kafka集群(3465)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+</div>
+
+<div id="sidebar_topcommentedposts" class="sidebar-block">
+    <div class="catListFeedback">
+    <h3 class="catListTitle">
+        <a href="https://www.cnblogs.com/ylty/most-commented" class="sidebar-card-title-a">评论排行榜</a>
+
+    </h3>
+    <div id="TopFeedbackPostsBlock">
+        <ul style="word-break:break-all">
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/17108963.html">
+                            1. JVM sandbox 实现热修复示例(11)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/13673357.html">
+                            2. SpringBoot接入两套kafka集群(1)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/9401207.html">
+                            3. Thumbnails 图片处理(1)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://www.cnblogs.com/ylty/p/6417259.html">
+                            4. hibernate + hsqldb单元测试(1)
+                        </a>
+                    </li>
+        </ul>
+    </div>
+</div>
+</div>
+
+<div id="sidebar_topdiggedposts" class="sidebar-block">
+    
+<div id="topdigg_posts_wrap">
+    <div class="catListView">
+        <h3 class="catListTitle">
+            <a href="https://www.cnblogs.com/ylty/most-liked" class="sidebar-card-title-a">推荐排行榜</a>
+
+        </h3>
+        <div id="TopDiggPostsBlock">
+            <ul style="word-break: break-all">
+                        <li>
+                            <a href="https://www.cnblogs.com/ylty/p/11851491.html">
+                                1. RocketMq 完整部署(2)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/ylty/p/16810301.html">
+                                2. SpringBoot Redis 实现分布式锁(1)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/ylty/p/16374927.html">
+                                3. PoweJob高级特性-MapReduce完整示例(1)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/ylty/p/16207354.html">
+                                4. Mac 手动安装 bee工具(1)
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.cnblogs.com/ylty/p/14313648.html">
+                                5. Mockito+Junit5单元测试(1)
+                            </a>
+                        </li>
+            </ul>
+        </div>
+    </div>
+</div>
+</div><div id="sidebar_recentcomments" class="sidebar-block">
+    <div class="catListComment">
+<h3 class="catListTitle"><a href="https://www.cnblogs.com/ylty/comments" class="sidebar-card-title-a">最新评论</a></h3>
+    <div class="RecentCommentBlock">
+        <ul>
+                <li class="recent_comment_title"><a href="https://www.cnblogs.com/ylty/p/17108963.html">1. Re:JVM sandbox 实现热修复示例</a></li>
+                <li class="recent_comment_body">@风小雅 应该是类加载器的原因。还有什么要配置、要注意的地方吗？...</li>
+                <li class="recent_comment_author">--Amoureux_W</li>
+                <li class="recent_comment_title"><a href="https://www.cnblogs.com/ylty/p/17108963.html">2. Re:JVM sandbox 实现热修复示例</a></li>
+                <li class="recent_comment_body">@Amoureux_W 那说明你项目本身加载这个类有问题，跟jvm-sandbox无关...</li>
+                <li class="recent_comment_author">--风小雅</li>
+                <li class="recent_comment_title"><a href="https://www.cnblogs.com/ylty/p/17108963.html">3. Re:JVM sandbox 实现热修复示例</a></li>
+                <li class="recent_comment_body">@风小雅 写死也没用一样的错 2025-01-23 18:29:38 default WARN on-event: event|THROWS|1059|1059|1015 occur an error...</li>
+                <li class="recent_comment_author">--Amoureux_W</li>
+                <li class="recent_comment_title"><a href="https://www.cnblogs.com/ylty/p/17108963.html">4. Re:JVM sandbox 实现热修复示例</a></li>
+                <li class="recent_comment_body">ExceptionRepairModule 这个类是另起的一个项目 用的&lt;parent&gt; &lt;groupId&gt;com.alibaba.jvm.sandbox&lt;/groupId&gt; &lt;artifactId&gt;...</li>
+                <li class="recent_comment_author">--Amoureux_W</li>
+                <li class="recent_comment_title"><a href="https://www.cnblogs.com/ylty/p/17108963.html">5. Re:JVM sandbox 实现热修复示例</a></li>
+                <li class="recent_comment_body">@风小雅 对在94347里面的 Class clazz = Class.forName(rtPattern);这个能获取到命令里的return=com.bestpay.tequila.jk.wrap....</li>
+                <li class="recent_comment_author">--Amoureux_W</li>
+        </ul>
+    </div>
+</div>
+
+
+</div></div>
+                    <script>loadBlogSideColumn();</script>
+			</div>			
+		</div>
+	</div>
+	<div class="clear"></div>
+	</div>
+	<div class="clear"></div>
+	<div id="footer">
+		<a href="https://www.cnblogs.com/" id="footer_site_link" class="footer-brand">博客园</a>
+<span class="footer-copyright"> &nbsp;©&nbsp; 2004-2025</span>
+<br><span class="footer-icp">
+    <a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33010602011771"><img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/ghs.png">浙公网安备 33010602011771号</a>
+    <a href="https://beian.miit.gov.cn/" target="_blank">浙ICP备2021040463号-3</a>
+</span>
+
+
+
+	</div>
+</div>
+
+
+
+    
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8G33EJ5dWE5OhU_7yPrjq1-qFW6JHMW5fSXbeqfZLlZ7dBPJb-8VPpniLiRyRazj0fBLQIsnoqC7RDNr9BbeoDT0ffXxw5xOv61XXRk_5eW5RUy0EeKn3TlTMiWQnsu91WQQ66IGAV2z7AXnvloHU2U">
+    <script async="" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/js"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-M95P3TTWJZ');
+</script>
+<script defer="" src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/hm.js.下载"></script>
+
+
+<div style="z-index: 998; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; flex-direction: column; align-items: center; justify-content: center">
+<div style="background: #fff;padding: 30px; margin: 30px; border-radius: 16px;">
+  <div style="width: 200px; height: 200px; background: rgba(255, 255, 255, 0.8); position: absolute; top: -100px; right: -100px; border-radius: 100px"></div>
+  <div style="text-align: center; font-size: 18px; margin-bottom: 10px;">点击右上角即可分享</div>
+  <img src="./JVM sandbox 实现热修复示例 - 风小雅 - 博客园_files/35695-20230906145857937-1471873834.gif" alt="微信分享提示">
+</div>   
+    </div><button class="charm-bar-item charm-bar-handle hidden" type="button" title="显示工具栏"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="logo">
+  <style>
+    .main {
+      fill: #FFF;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .main {
+        fill: #59E8EB;
+      }
+    }
+  </style>
+  <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+    <g transform="translate(-240.000000, -192.000000)">
+      <g id="VIP_3_line" transform="translate(240.000000, 192.000000)">
+        <path d="M24,0 L24,24 L0,24 L0,0 L24,0 Z M12.5934901,23.257841 L12.5819402,23.2595131 L12.5108777,23.2950439 L12.4918791,23.2987469 L12.4918791,23.2987469 L12.4767152,23.2950439 L12.4056548,23.2595131 C12.3958229,23.2563662 12.3870493,23.2590235 12.3821421,23.2649074 L12.3780323,23.275831 L12.360941,23.7031097 L12.3658947,23.7234994 L12.3769048,23.7357139 L12.4804777,23.8096931 L12.4953491,23.8136134 L12.4953491,23.8136134 L12.5071152,23.8096931 L12.6106902,23.7357139 L12.6232938,23.7196733 L12.6232938,23.7196733 L12.6266527,23.7031097 L12.609561,23.275831 C12.6075724,23.2657013 12.6010112,23.2592993 12.5934901,23.257841 L12.5934901,23.257841 Z M12.8583906,23.1452862 L12.8445485,23.1473072 L12.6598443,23.2396597 L12.6498822,23.2499052 L12.6498822,23.2499052 L12.6471943,23.2611114 L12.6650943,23.6906389 L12.6699349,23.7034178 L12.6699349,23.7034178 L12.678386,23.7104931 L12.8793402,23.8032389 C12.8914285,23.8068999 12.9022333,23.8029875 12.9078286,23.7952264 L12.9118235,23.7811639 L12.8776777,23.1665331 C12.8752882,23.1545897 12.8674102,23.1470016 12.8583906,23.1452862 L12.8583906,23.1452862 Z M12.1430473,23.1473072 C12.1332178,23.1423925 12.1221763,23.1452606 12.1156365,23.1525954 L12.1099173,23.1665331 L12.0757714,23.7811639 C12.0751323,23.7926639 12.0828099,23.8018602 12.0926481,23.8045676 L12.108256,23.8032389 L12.3092106,23.7104931 L12.3186497,23.7024347 L12.3186497,23.7024347 L12.3225043,23.6906389 L12.340401,23.2611114 L12.337245,23.2485176 L12.337245,23.2485176 L12.3277531,23.2396597 L12.1430473,23.1473072 Z" id="MingCute" fill-rule="nonzero"></path>
+        <path class="main" d="M2.33789,4.86283 C1.86918,4.02957 2.47132,3 3.42736,3 L9.70837,3 C10.2488,3 10.7475,3.29076 11.0138,3.7611 L12.9999,7.26995 L14.986,3.7611 C15.2523,3.29076 15.7509,3 16.2914,3 L20.5724,3 C21.5285,3 22.1306,4.02957 21.6619,4.86282 L13.0894,20.1029 C12.6115,20.9525 11.3883,20.9525 10.9104,20.1029 L2.33789,4.86283 Z M4.70974,5 L11.9999,17.9603 L19.29,5 L16.5829,5 L12.9999,11.3301 L9.41685,5 L4.70974,5 Z"></path>
+      </g>
+    </g>
+  </g>
+</svg> </button><div class="charm-bar-wrapper"><div class="charm-bar-main"><div class="charm-bar-panel inactive hidden"></div><div class="charm-bar"><a class="charm-bar-item tongyi" target="_blank" title="" href="https://www.trae.cn/?utm_source=community&amp;utm_medium=CPA_cnblogs&amp;utm_campaign=webtest"><span style="font-size: 22px; font-weight: 500; margin-left: 5px; letter-spacing: 2px; ">字节旗下的 AI IDE</span></a><button class="charm-bar-item" type="button" title="隐藏工具栏"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"></path>
+</svg>
+</button></div></div></div></body><div id="aiFabShadowRoot" style="display: block; opacity: 1; transition: opacity 0.4s ease-out, transform 0.4s ease-out;"><template shadowrootmode="open"><!-- sidePanelButton.html -->
+
+<style>
+    .acrobat-button-container {
+        position: fixed;
+        right: 0;
+        bottom: 36px;
+        z-index: 2147483646;
+        visibility: visible !important;
+        pointer-events: all;
+        opacity: 1;
+        display: flex;
+        align-items: center;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    @media print {
+        .acrobat-button-container {
+            display: none !important;
+        }
+    }
+
+    .acrobat-button {
+        position: relative;
+        background: white;
+        display: flex;
+        align-items: center;
+        pointer-events: all;
+        touch-action: none;
+        box-shadow: 0px 2px 8px 0px #00000029;
+        height: 34px;
+        width: 34px;
+        border: 1px solid transparent;
+        background-clip: padding-box, border-box;
+        background-origin: border-box;
+        background-image: linear-gradient(white, white),
+                        linear-gradient(95.85deg, #D73220 0%, #D92361 33%, #7155FA 100%);
+        border-radius: 18px;
+        justify-content: right;
+        margin-right: 34px;
+    }
+
+    .acrobat-button-container-transparent {
+        opacity: 0.4 !important;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .acrobat-button-container-transparent:hover,
+    .acrobat-button-container-transparent:focus,
+    .acrobat-button-container-transparent:active {
+        opacity: 1;
+    }
+
+    .acrobat-button > svg {
+        flex-shrink: 0;
+        margin: 4px 5px 5px 5px;
+        width: 22px;
+        height: 22px;
+        pointer-events: none;
+        fill: #b40000;
+    }
+    .acrobat-button:has(.close-btn.open),
+    .expand-acrobat-button {
+        width: 64px;
+    }
+
+    .disabled {
+        background: #B1B1B1;
+    }
+
+    .tooltip-text {
+        width: 160px;
+        visibility: hidden;
+        opacity: 0;
+        background-color: #FFFFFF;
+        color: #292929;
+        border-radius: 7px;
+        padding: 4px 1px 5px 9px;
+        position: absolute;
+        z-index: 1;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 10px;
+        transition: opacity 0.3s, visibility 0s linear 2s;
+        font-size: 12px;
+        line-height: 15px;
+        font-family: 'adobe-clean', Adobe Clean, sans-serif;
+        filter: drop-shadow(0px 1px 6px rgba(0, 0, 0, 0.12));
+    }
+
+    .tooltip-text::after {
+       content: '';
+       position: absolute;
+       top: 50%;
+       left: 100%;
+       transform: translateY(-50%);
+       border-width: 6px;
+       border-style: solid;
+       border-color: transparent transparent transparent #fff;
+    }
+
+    .acrobat-button:hover ~ .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+        transition-delay: 1s;
+        line-height: 1.5;
+        font-family: 'adobe-clean', Adobe Clean, sans-serif;
+    }
+
+    .show-tooltip {
+        visibility: visible;
+        opacity: 1;
+        line-height: 1.5;
+        font-family: 'adobe-clean', Adobe Clean, sans-serif;
+        transition: opacity 0.3s;
+    }
+
+    .close-btn {
+        position: relative;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-btn svg {
+        fill: #464646;
+    }
+
+    .close-btn.showCloseButton {
+        opacity: 1;
+        display: flex;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 2px;
+        margin: 4px;
+    }
+
+    .fab-view-settings-dialog {
+        display: none;
+        position: absolute;
+        bottom: 34px;
+        right: 0px;
+        z-index: 1;
+    }
+
+    .close-btn:hover {
+        background: #E6E6E6;
+        border-radius: 50%;
+    }
+
+    .fab-view-settings-dialog.showDialog {
+        display: block;
+    }
+    .close-btn .burger-icon {
+        display: inline;
+        margin-bottom: 2px;
+    }
+    .close-btn .close-icon {
+        display: none;
+    }
+    .close-btn.open .burger-icon {
+        display: none;
+    }
+    .close-btn.open .close-icon {
+        display: inline;
+    }
+    .tooltip-text .tooltip-text-content {
+        font-weight: bold;
+    }
+    .tooltip-text .tooltip-sub-text-text {
+        font-style: italic;
+        font-size: 11px;
+    }
+    .draggable-handle {
+        display: none;
+        position: absolute;
+        right: 17px;
+        cursor: grab;
+    }
+    .draggable-handle-visible {
+        display: flex;
+    }
+    .acrobat-button:hover {
+        cursor: pointer;
+    }
+</style>
+
+<div class="acrobat-button-container">
+    <div class="acrobat-button" role="button">
+        <div class="close-btn" role="button" aria-label="Show Acrobat AI FAB View Settings">
+            <svg class="close-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <mask id="mask0_8552_7892" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="14" height="14">
+                    <path d="M7.82482 7.00034L10.6374 4.18778C10.7893 4.03592 10.7893 3.78969 10.6374 3.63783L10.3625 3.36292C10.2106 3.21106 9.96446 3.21106 9.81255 3.36292L6.99995 6.17548L4.18734 3.36292C4.03543 3.21106 3.78933 3.21106 3.63743 3.36292L3.36247 3.63783C3.21056 3.78969 3.21056 4.03592 3.36247 4.18778L6.17507 7.00034L3.36247 9.81295C3.21056 9.96481 3.21056 10.2111 3.36247 10.3629L3.63743 10.6378C3.78933 10.7897 4.03543 10.7897 4.18734 10.6378L6.99995 7.82526L9.81255 10.6378C9.96446 10.7897 10.2106 10.7897 10.3625 10.6378L10.6374 10.3629C10.7893 10.2111 10.7893 9.96481 10.6374 9.81295L7.82482 7.00034Z" fill="#222222"></path>
+                </mask>
+                <g mask="url(#mask0_8552_7892)">
+                    <rect width="14" height="14"></rect>
+                </g>
+            </svg>
+            <svg class="burger-icon" width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <mask id="mask0_12188_28876" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="3" y="3" width="15" height="14">
+                <path d="M15.1285 12.8008H6.37852C6.08867 12.8008 5.85352 13.0359 5.85352 13.3258C5.85352 13.6156 6.08867 13.8508 6.37852 13.8508H15.1285C15.4184 13.8508 15.6535 13.6156 15.6535 13.3258C15.6535 13.0359 15.4184 12.8008 15.1285 12.8008Z" fill="#292929"></path>
+                <path d="M6.37852 6.85078H15.1285C15.4184 6.85078 15.6535 6.61562 15.6535 6.32578C15.6535 6.03594 15.4184 5.80078 15.1285 5.80078H6.37852C6.08867 5.80078 5.85352 6.03594 5.85352 6.32578C5.85352 6.61562 6.08867 6.85078 6.37852 6.85078Z" fill="#292929"></path>
+                <path d="M15.1285 9.30078H6.37852C6.08867 9.30078 5.85352 9.53594 5.85352 9.82578C5.85352 10.1156 6.08867 10.3508 6.37852 10.3508H15.1285C15.4184 10.3508 15.6535 10.1156 15.6535 9.82578C15.6535 9.53594 15.4184 9.30078 15.1285 9.30078Z" fill="#292929"></path>
+                </mask>
+                <g mask="url(#mask0_12188_28876)">
+                <rect x="3.75391" y="3" width="14" height="14" fill="#464646"></rect>
+                </g>
+            </svg>
+            <div class="fab-view-settings-dialog"></div>
+        </div>
+        <svg id="ImportedIcons" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+            <path d="m6.21661,16.39534c-1.35034,2.23499-2.67933,3.64758-3.45616,3.64758-.12795.00539-.25276-.04056-.34667-.12762-.14818-.12483-.21629-.32065-.17758-.5105.14764-.80079,1.68628-1.95576,3.98041-3.00946Zm6.49075-3.19656c-.57993.12528-1.1792.27056-1.78689.43544-.4366.11893-.87951.24862-1.32255.38729.23541-.4949.4515-.98554.6398-1.452.24831-.6159.48156-1.232.69564-1.83456.18831.30354.38304.59839.58195.88207.39375.56092.81787,1.09736,1.19205,1.58176Zm-2.99822-10.63684c.08814-.18001.26644-.29855.46653-.31016.51149,0,.62276.63358.62276,1.1638-.06787,1.25011-.29293,2.48669-.66988,3.68055-.85816-2.33642-.73831-3.97319-.41942-4.53419h.00001Zm9.60883,12.20974c-.13359.4402-.56725.71808-1.023.6555-.15594-.00061-.3112-.02054-.46224-.05933-1.07834-.28263-2.07953-.80363-2.92976-1.5246.71719-.11267,1.44198-.17001,2.16797-.17149.48402-.00813.96771.03017,1.44442.11438.43447.09244.92449.33873.80261.98554Zm1.45515-1.0537c-1.01837-.83309-2.33117-1.21735-3.63802-1.06487-.98482.00983-1.96732.09739-2.93836.26187-.62354-.62512-1.19003-1.30467-1.69272-2.03054-.38314-.54455-.73672-1.10931-1.05923-1.69182.54287-1.57384.85986-3.2167.94151-4.87953,0-1.49369-.57564-3.09087-2.19132-3.09087-.56296.01952-1.07528.33036-1.35261.82066-.68906,1.2165-.41298,3.72002.68705,6.26756-.38306,1.17041-.80046,2.31007-1.31196,3.57265-.43687,1.08123-.93191,2.13803-1.48293,3.16579-1.64775.68213-5.15115,2.33642-5.48494,4.16456-.10306.53569.0783,1.08658.47942,1.45629.39145.35044.90217.53779,1.42737.5236,2.10998,0,4.21366-3.003,5.63044-5.58789.80461-.2816,1.62641-.53671,2.44391-.759.8967-.24407,1.76345-.44427,2.58082-.594,1.39014,1.39224,3.25004,2.21523,5.21531,2.30773,1.36751,0,1.87887-.60942,2.06516-1.122.20733-.5893.08589-1.24438-.3189-1.72019Z" fill="var(--iconRed, #d31510)" fill-rule="evenodd"></path>
+        </svg>
+    </div>
+    <div class="draggable-handle">
+        <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.60039 13.0699C5.26313 13.0699 5.80039 12.5327 5.80039 11.8699C5.80039 11.2072 5.26313 10.6699 4.60039 10.6699C3.93765 10.6699 3.40039 11.2072 3.40039 11.8699C3.40039 12.5327 3.93765 13.0699 4.60039 13.0699Z" fill="#292929"></path>
+            <path d="M4.60039 8.27109C5.26313 8.27109 5.80039 7.73384 5.80039 7.07109C5.80039 6.40835 5.26313 5.87109 4.60039 5.87109C3.93765 5.87109 3.40039 6.40835 3.40039 7.07109C3.40039 7.73384 3.93765 8.27109 4.60039 8.27109Z" fill="#292929"></path>
+            <path d="M4.60039 3.47031C5.26313 3.47031 5.80039 2.93305 5.80039 2.27031C5.80039 1.60757 5.26313 1.07031 4.60039 1.07031C3.93765 1.07031 3.40039 1.60757 3.40039 2.27031C3.40039 2.93305 3.93765 3.47031 4.60039 3.47031Z" fill="#292929"></path>
+            <path d="M9.4002 13.0699C10.0629 13.0699 10.6002 12.5327 10.6002 11.8699C10.6002 11.2072 10.0629 10.6699 9.4002 10.6699C8.73745 10.6699 8.2002 11.2072 8.2002 11.8699C8.2002 12.5327 8.73745 13.0699 9.4002 13.0699Z" fill="#292929"></path>
+            <path d="M9.4002 8.27109C10.0629 8.27109 10.6002 7.73384 10.6002 7.07109C10.6002 6.40835 10.0629 5.87109 9.4002 5.87109C8.73745 5.87109 8.2002 6.40835 8.2002 7.07109C8.2002 7.73384 8.73745 8.27109 9.4002 8.27109Z" fill="#292929"></path>
+            <path d="M9.4002 3.47031C10.0629 3.47031 10.6002 2.93305 10.6002 2.27031C10.6002 1.60757 10.0629 1.07031 9.4002 1.07031C8.73745 1.07031 8.2002 1.60757 8.2002 2.27031C8.2002 2.93305 8.73745 3.47031 9.4002 3.47031Z" fill="#292929"></path>
+        </svg>  
+    </div>
+    <div class="tooltip-text">
+        <span id="tooltipTextEnabled" class="translate tooltip-text-content">使用 AI 助手获取摘要和关键见解</span>
+        <span id="tooltipTextSubText" class="translate tooltip-sub-text-text">由 Adobe Acrobat 提供支持</span>
+    </div>
+</div>
+</template></div></html>
