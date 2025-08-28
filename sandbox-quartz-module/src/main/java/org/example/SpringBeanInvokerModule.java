@@ -17,19 +17,25 @@ import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
 import javax.annotation.Resource;
 import java.io.PrintWriter;
+import java.lang.ref.Reference;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @MetaInfServices(Module.class)
 @Information(id = "spring-bean-invoker", version = "0.0.1", author = "your-email@example.com")
 public class SpringBeanInvokerModule extends ParamSupported implements Module {
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static DefaultListableBeanFactory beanFactory;
     @Resource
     private ModuleEventWatcher moduleEventWatcher;
 
@@ -107,28 +113,19 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
             String cacheKey = StringUtils.isNotBlank(beanName) ? beanName : className;
             logger.info("cacheKey:{}",cacheKey);
             if (beanCache.containsKey(cacheKey)) {
+                logger.info("------111bean：");
                 bean = beanCache.get(cacheKey);
                 logger.info("bean:{}",bean);
 
             } else {
-                if (applicationContext == null) {
-                    applicationContext = getApplicationContext();
-                    if (applicationContext == null) {
-                        printer.print("Error: Unable to get Spring ApplicationContext");
-                        logger.info("Error: Unable to get Spring ApplicationContext");
-                        return;
-                    }
-                }
-                logger.info("beanName：{}",beanName);
-
-                if (StringUtils.isNotBlank(beanName)) {
-                    bean = applicationContext.getBean(beanName);
-                } else {
-                    Class<?> clazz = Class.forName(className);
-                    bean = applicationContext.getBean(clazz);
-                }
-
+                logger.info("------22222bean：");
+                //Class<?> aClass = Class.forName(cacheKey);
+                //logger.info("------22222bean：{}",aClass);
+                bean = getBeanFactory().getBean(cacheKey);
                 logger.info("------bean：{}",bean);
+
+//                Object bean1 = getBeanFactory().getBean(aClass);
+//                logger.info("------bean1：{}",bean1);
 
                 beanCache.put(cacheKey, bean);
             }
@@ -136,7 +133,7 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
             // 获取方法（从缓存或通过反射）
             Method method;
             String methodCacheKey = cacheKey + "#" + methodName;
-
+            logger.info("获取方法：{}" ,methodCacheKey);
             if (methodCache.containsKey(methodCacheKey)) {
                 method = methodCache.get(methodCacheKey);
             } else {
@@ -149,6 +146,7 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
 
                 if (method == null) {
                     printer.print("Error: Method not found: " + methodName);
+                    logger.info("Error: Method not found: {}",methodName);
                     return;
                 }
 
@@ -156,32 +154,36 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
             }
 
             // 解析参数
-            Object[] args = null;
-            if (StringUtils.isNotBlank(argsJson)) {
-                Class<?>[] parameterTypes = method.getParameterTypes();
-                args = objectMapper.readValue(argsJson, Object[].class);
-
-                // 如果需要，可以在这里进行参数类型转换
-                // 例如，将JSON数字转换为正确的Java类型
-            }
-
+//            Object[] args = null;
+//            if (StringUtils.isNotBlank(argsJson)) {
+//                Class<?>[] parameterTypes = method.getParameterTypes();
+//                args = objectMapper.readValue(argsJson, Object[].class);
+//
+//                // 如果需要，可以在这里进行参数类型转换
+//                // 例如，将JSON数字转换为正确的Java类型
+//            }
+            logger.info("准备调用");
             // 调用方法
             Object result;
-            if (args != null && args.length > 0) {
-                result = method.invoke(bean, args);
-            } else {
-                result = method.invoke(bean);
-            }
+//            if (args != null && args.length > 0) {
+//                result = method.invoke(bean, args);
+//            } else {
+//                result = method.invoke(bean);
+//            }
+            result = method.invoke(bean);
 
             // 输出结果
             if (result != null) {
                 printer.print("Method result: " + objectMapper.writeValueAsString(result));
+                logger.info("Method result: {}",result);
             } else {
                 printer.print("Method executed successfully, returned null");
+                logger.info("Method executed successfully, returned null");
             }
 
         } catch (Exception e) {
             printer.print("Error invoking method: " + e.getMessage());
+            logger.info("Error invoking method: {}" , e.getMessage());
         }
     }
 
@@ -196,15 +198,18 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
                 applicationContext = getApplicationContext();
                 if (applicationContext == null) {
                     printer.print("Error: Unable to get Spring ApplicationContext");
+                    logger.info("Error: Unable to get Spring ApplicationContext");
                     return;
                 }
             }
 
             String[] beanNames = applicationContext.getBeanDefinitionNames();
             printer.print("Spring Beans (" + beanNames.length + "):");
+            logger.info("beans:{}",beanNames);
 
             for (String beanName : beanNames) {
                 Object bean = applicationContext.getBean(beanName);
+                logger.info("bean111:{}",bean);
                 printer.print(beanName + " : " + bean.getClass().getName());
             }
 
@@ -233,6 +238,22 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
 
                 return (ApplicationContext) method.invoke(null, servletContext);
             }
+
+            // 非Web环境备选方案
+            if (webApplicationContext == null) {
+                try {
+                    // 尝试通过Spring Boot的SpringApplication获取
+                    Class<?> springApplicationClass = Class.forName("org.springframework.boot.SpringApplication");
+                    java.lang.reflect.Method getApplicationContextMethod =
+                            springApplicationClass.getMethod("getApplicationContext");
+                    return (ApplicationContext) getApplicationContextMethod.invoke(null);
+                } catch (Exception e) {
+                    // 记录日志但不要抛出异常
+                    System.err.println("Failed to get ApplicationContext: " + e.getMessage());
+                }
+            }
+
+
         } catch (Exception e) {
             // 尝试其他方式获取ApplicationContext
             try {
@@ -276,5 +297,45 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public DefaultListableBeanFactory getBeanFactory() {
+        if (beanFactory != null)
+            return beanFactory;
+        try {
+            logger.info("...........................Mock-Server:");
+            Class<DefaultListableBeanFactory> defaultListableBeanFactoryClass = DefaultListableBeanFactory.class;
+            Field serializableFactories = defaultListableBeanFactoryClass.getDeclaredField("serializableFactories");
+            serializableFactories.setAccessible(true);
+            Map<String, Reference<DefaultListableBeanFactory>> o = (Map<String, Reference<DefaultListableBeanFactory>>)serializableFactories.get((Object)null);
+            Set<Map.Entry<String, Reference<DefaultListableBeanFactory>>> entries = o.entrySet();
+            Iterator<Map.Entry<String, Reference<DefaultListableBeanFactory>>> iterator = entries.iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Reference<DefaultListableBeanFactory>> next = iterator.next();
+                Reference<DefaultListableBeanFactory> value = next.getValue();
+                DefaultListableBeanFactory defaultListableBeanFactory = value.get();
+                assert defaultListableBeanFactory != null;
+                beanFactory = defaultListableBeanFactory;
+            }
+        } catch (Exception|NoClassDefFoundError e) {
+            logger.info("...........................Mock-Server  err",e);
+        }
+        logger.info("...........................Mock-Server  {}",beanFactory);
+        String[] beanNames = beanFactory.getBeanDefinitionNames();
+        for (String beanName : beanNames) {
+            Object bean = beanFactory.getBean(beanName);
+            logger.info("Bean name: " + beanName + ", Bean object: " + bean);
+        }
+
+        return beanFactory;
+    }
+
+    public static String getBeanName(String className) {
+        String[] parts = className.split("\\.");
+        String simpleClassName = parts[parts.length - 1];
+        String firstLetter = simpleClassName.substring(0, 1).toLowerCase();
+        String restOfName = simpleClassName.substring(1);
+        String result = firstLetter + restOfName;
+        return result;
     }
 }
