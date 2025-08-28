@@ -90,11 +90,14 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
         final String className = getParameter(param, "className");
         final String methodName = getParameter(param, "methodName");
         final String argsJson = getParameter(param, "args");
+        logger.info("enter invokeMethod {}  {}  {}  {}",beanName,className,methodName,argsJson);
 
         final Printer printer = new ConcurrentLinkedQueuePrinter(writer);
 
         if (StringUtils.isBlank(methodName)) {
             printer.print("Error: methodName is required");
+            logger.info("Error: methodName is required");
+
             return;
         }
 
@@ -102,17 +105,21 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
             // 获取Bean（从缓存或直接获取）
             Object bean;
             String cacheKey = StringUtils.isNotBlank(beanName) ? beanName : className;
-
+            logger.info("cacheKey:{}",cacheKey);
             if (beanCache.containsKey(cacheKey)) {
                 bean = beanCache.get(cacheKey);
+                logger.info("bean:{}",bean);
+
             } else {
                 if (applicationContext == null) {
                     applicationContext = getApplicationContext();
                     if (applicationContext == null) {
                         printer.print("Error: Unable to get Spring ApplicationContext");
+                        logger.info("Error: Unable to get Spring ApplicationContext");
                         return;
                     }
                 }
+                logger.info("beanName：{}",beanName);
 
                 if (StringUtils.isNotBlank(beanName)) {
                     bean = applicationContext.getBean(beanName);
@@ -120,6 +127,8 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
                     Class<?> clazz = Class.forName(className);
                     bean = applicationContext.getBean(clazz);
                 }
+
+                logger.info("------bean：{}",bean);
 
                 beanCache.put(cacheKey, bean);
             }
@@ -182,32 +191,6 @@ public class SpringBeanInvokerModule extends ParamSupported implements Module {
         printer.print("enter list beans.....................");
         logger.info("enter list beans");
 
-        try {
-            if (applicationContext == null) {
-                applicationContext = getApplicationContext();
-                if (applicationContext == null) {
-                    printer.print("Error: Unable to get Spring ApplicationContext");
-                    return;
-                }
-            }
-
-            String[] beanNames = applicationContext.getBeanDefinitionNames();
-            printer.print("Spring Beans (" + beanNames.length + "):");
-
-            for (String beanName : beanNames) {
-                Object bean = applicationContext.getBean(beanName);
-                printer.print(beanName + " : " + bean.getClass().getName());
-            }
-
-        } catch (Exception e) {
-            printer.print("Error listing beans: " + e.getMessage());
-        }
-    }
-    @Http("/listBeans1")
-    public void listBeans1(final Map<String, String> param, final PrintWriter writer) {
-        final Printer printer = new ConcurrentLinkedQueuePrinter(writer);
-        printer.print("enter list beans1.....................");
-        logger.info("enter list beans1");
         try {
             if (applicationContext == null) {
                 applicationContext = getApplicationContext();
