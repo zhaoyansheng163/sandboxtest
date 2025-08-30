@@ -21,16 +21,16 @@ public class TestController {
     public String getTest()  {
         log.info("enter test");
         System.out.println("enter test");
-        return "1111";
+        return getData();
     }
     @RequestMapping("/testlist")
     public List<String> getList() {
         log.info("enter getList");
         System.out.println("enter getList");
-        List<String> a = new ArrayList<>();
-        a.add("11");
-        a.add("test1");
-        return a;
+//        List<String> a = new ArrayList<>();
+//        a.add("11");
+//        a.add("test1");
+        return getListData();
     }
 
     @RequestMapping("/getAge")
@@ -38,5 +38,14 @@ public class TestController {
         log.info("enter getAge");
         System.out.println("enter getAge");
         return 1;
+    }
+    public String getData(){
+        return "1111";
+    }
+    public List<String> getListData(){
+        List<String> a = new ArrayList<>();
+        a.add("11");
+        a.add("test1");
+        return a;
     }
 }
